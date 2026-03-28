@@ -1404,6 +1404,26 @@ const server = app.listen(PORT, "0.0.0.0", async () => {
     fs.chmodSync(STATE_DIR, 0o700);
   } catch {}
 
+  // Sync custom skills from the Docker image into the workspace skills dir.
+  try {
+    const customSkillsSrc = path.join(process.cwd(), "custom-skills");
+    const skillsDest = path.join(WORKSPACE_DIR, "skills");
+    if (fs.existsSync(customSkillsSrc)) {
+      fs.mkdirSync(skillsDest, { recursive: true });
+      for (const entry of fs.readdirSync(customSkillsSrc, { withFileTypes: true })) {
+        if (entry.isDirectory()) {
+          const src = path.join(customSkillsSrc, entry.name);
+          const dest = path.join(skillsDest, entry.name);
+          fs.cpSync(src, dest, { recursive: true, force: true });
+        }
+      }
+      console.log("[wrapper] custom skills synced to workspace");
+    }
+  } catch (err) {
+    console.warn(`[wrapper] failed to sync custom skills: ${String(err)}`);
+  }
+
+
   console.log(`[wrapper] gateway token: ${OPENCLAW_GATEWAY_TOKEN ? "(set)" : "(missing)"}`);
   console.log(`[wrapper] gateway target: ${GATEWAY_TARGET}`);
   if (!SETUP_PASSWORD) {
