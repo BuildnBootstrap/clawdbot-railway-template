@@ -178,6 +178,15 @@ async function startGateway() {
   fs.mkdirSync(STATE_DIR, { recursive: true });
   fs.mkdirSync(WORKSPACE_DIR, { recursive: true });
 
+  // OPENCLAW_GATEWAY_AUTH_MODE controls whether the gateway requires token auth.
+  // Set to "none" to disable auth entirely (e.g. when behind Railway's reverse proxy).
+  // Defaults to "token" for backward compatibility.
+  const gatewayAuthMode = (process.env.OPENCLAW_GATEWAY_AUTH_MODE?.trim() || "token").toLowerCase();
+
+  // OPENCLAW_GATEWAY_TOKEN_VALUE allows overriding the token passed to the gateway.
+  // Defaults to the resolved OPENCLAW_GATEWAY_TOKEN for backward compatibility.
+  const gatewayTokenValue = process.env.OPENCLAW_GATEWAY_TOKEN_VALUE?.trim() || OPENCLAW_GATEWAY_TOKEN;
+
   const args = [
     "gateway",
     "run",
@@ -185,10 +194,9 @@ async function startGateway() {
     "loopback",
     "--port",
     String(INTERNAL_GATEWAY_PORT),
-    "--auth",
-    "token",
-    "--token",
-    OPENCLAW_GATEWAY_TOKEN,
+    ...(gatewayAuthMode === "none"
+      ? []
+      : ["--auth", "token", "--token", gatewayTokenValue]),
   ];
 
   gatewayProc = childProcess.spawn(OPENCLAW_NODE, clawArgs(args), {
